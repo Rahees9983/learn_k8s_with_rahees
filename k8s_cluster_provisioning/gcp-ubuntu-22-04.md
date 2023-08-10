@@ -1,3 +1,13 @@
+Install Kubernetes Cluster using kubeadm on Ubuntu 22.04 LTS (Deployed on GCP)
+
+
+
+
+
+
+
+
+
 yum install -y -q kubeadm kubelet kubectl
 
 
