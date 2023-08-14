@@ -15,7 +15,7 @@ spec:
         app: calculator
     spec:
       containers:
-        - image: rahees9983/test-app:main
+        - image: rahees9983/test-app:v1.0.0
           name: calculator-container
           ports:
             - containerPort: 3000
