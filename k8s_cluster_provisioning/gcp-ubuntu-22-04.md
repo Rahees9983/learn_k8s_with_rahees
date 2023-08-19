@@ -1,51 +1,92 @@
-Install Kubernetes Cluster using kubeadm on Ubuntu 22.04 LTS (Deployed on GCP)
+# Install Kubernetes Cluster using kubeadm on Ubuntu 22.04 LTS (Deployed on GCP)
+Follow this documentation to set up a Kubernetes cluster with one master and one worker node on __Ubuntu 22.04 LTS VM Provisoined on GCP__.
 
-Follow this documentation to set up a Kubernetes cluster with one master and one worker node on Ubuntu 22.04 LTS VM Provisoined on GCP.
+## Kubernetes Cluster Requirments
+|Role|Public IP |Private IP|OS|Machine type|Service Acount|
+|----|----|----|----|----|----|
+|Master|Yes|10.128.0.55|Ubuntu 22.04|e2-medium|Compute Engine default service account|
+|Worker|Yes|10.128.0.56|Ubuntu 22.04|e2-medium|Compute Engine default service account|
 
-VM configuration
-
-OS Version:- Ubuntu 22.04 LTS
-Architure:- x86
-Cloud:- GCP
-VM Name:- kmaster
-Service account used for VM: Compute Engine default service account
-Public Ip: Yes
-Private IP:- Yes
-Machine type:- e2-medium
-Boot Disk size: 10 GB
-
-Command to be executed on master and worker nodes are below:-
-
-$ sudo su -
-$  ufw disable
-$  swapoff -a; sed -i '/swap/d' /etc/fstab
-$  cat >>/etc/sysctl.d/kubernetes.conf<<EOF
+## Command to be executed on master and worker nodes are below:-
+##### Login as `root` user
+```
+sudo su -
+```
+Perform all the commands as root user unless otherwise specified
+##### Disable Firewall
+```
+ufw disable
+```
+##### Disable swap
+```
+swapoff -a; sed -i '/swap/d' /etc/fstab
+```
+##### Update sysctl settings for Kubernetes networking
+```
+cat >>/etc/sysctl.d/kubernetes.conf<<EOF
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF
+sysctl --system
+```
+##### Install docker engine 
+```
+{
+  apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  apt update
+  apt install docker-ce=5:20.10.20~3-0~ubuntu-jammy docker-ce-cli=5:20.10.20~3-0~ubuntu-jammy containerd.io docker-buildx-plugin docker-compose-plugin
+}
+```
+### Kubernetes Setup
+##### Add Apt repository
+```
+{
+  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+}
+```
+##### Install Kubernetes components
+```
+apt update && apt install -y kubeadm=1.22.2-00 kubelet=1.22.2-00 kubectl=1.22.2-00
+```
 
-$  sysctl --system
-$  {   apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common;   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -;   add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable";   apt update; }
-$  apt-cache madison docker-ce | awk '{ print $3 }'
-$  VERSION_STRING=5:20.10.20~3-0~ubuntu-jammy
-$  sudo apt-get install docker-ce=$VERSION_STRING docker-ce-cli=$VERSION_STRING containerd.io docker-buildx-plugin docker-compose-plugin
-$  sudo docker run hello-world
-$  docker ps -a
-$  {   curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -;   echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list; }
-$  apt update && apt install -y kubeadm=1.22.2-00 kubelet=1.22.2-00 kubectl=1.22.2-00
+## On kmaster
+##### Initialize Kubernetes Cluster
+Update the below command with the ip address of kmaster
+```
+kubeadm init --apiserver-advertise-address=10.128.0.55 --pod-network-cidr=192.168.0.0/16  --ignore-preflight-errors=all --v=5
+```
+##### Deploy Calico network
+```
+kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
+```
 
-Commands be executed on master node
+##### Cluster join command
+```
+kubeadm token create --print-join-command
+```
 
-$  kubeadm init --apiserver-advertise-address=10.128.0.27 --pod-network-cidr=192.168.0.0/16  --ignore-preflight-errors=all --v=5
-$  kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
-$  kubectl get po -A
+##### To be able to run kubectl commands as non-root user
+If you want to be able to run kubectl commands as non-root user, then as a non-root user perform these
+```
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
 
-Comands to be executed on worker node
+## On Kworker
+##### Join the cluster
+Use the output from __kubeadm token create__ command in previous step from the master server and run here.
 
-To join the worker node in the cluster use the output from **kubeadm token create --print-join-command **
-example of my output
-
-$ kubeadm join 10.128.0.27:6443 --token j0iemg.v7y4vt71lyw3pbf3 \
-        --discovery-token-ca-cert-hash sha256:bf71e86a1b626a5e854e204a8a182e2f412a9252bba2ed89b8e280200a7334aa
-
- 
+## Verifying the cluster (On kmaster)
+##### Get Nodes status
+```
+kubectl get nodes
+```
+##### Get component status
+```
+kubectl get cs
+```
+Enjoy Kubernetes Learning with Rahees!!!
