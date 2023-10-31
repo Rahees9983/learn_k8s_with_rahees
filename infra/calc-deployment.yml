@@ -5,7 +5,7 @@ metadata:
     app: calculator
   name: calculator-deployment
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: calculator
