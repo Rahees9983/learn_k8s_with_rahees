@@ -5,7 +5,7 @@ metadata:
     app: calculator
   name: calculator-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: calculator
@@ -15,7 +15,7 @@ spec:
         app: calculator
     spec:
       containers:
-        - image: rahees9983/test-app:v1.0.2
+        - image: rahees9983/test-app:main
           name: calculator-container
           ports:
             - containerPort: 3000
